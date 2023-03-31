@@ -36,6 +36,9 @@ var H = canvas.height = window.innerHeight-50;
 var wscounter = 0;
 var socket;
 
+var currentColor = '#ffffff';
+var indicatorColours = ['#ff0001', '#1000ff'];
+
 function debug(str) {
     var debugDiv = document.getElementById('debug');
     debugDiv.innerHTML = "" + str;
@@ -44,9 +47,36 @@ debug("Test");
 
 world = {};
 
+function sendJSONXMLHTTPRequest(url, objects, callback, method = 'PUT') {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState==4) {
+            try {
+                //XXX: parse some JSON from the request!
+                //XXX: Pass the data to the callback!
+                if (xhr.status==200) callback(JSON.parse(xhr.responseText));
+            } 
+            catch(e) {
+                alert('Error: ' + e.name);
+                console.log(e);
+            }
+        }
+    };
+    //XXX: POST to a URL
+    //XXX: set the mimetype and the accept headers!
+    // Remember to use application/json !
+    xhr.open(method, url, true);
+    var headerAttributes = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+    }
+    for (var k in headerAttributes) xhr.setRequestHeader(k, headerAttributes[k]);
+    xhr.send(objects?JSON.stringify(objects):'');
+}
+
 //XXX: TODO Make this prettier!
 function drawCircle(context,entity) {
-    with(context) {
+    /*with(context) {
         beginPath();                
         lineWidth = 3;
         var x = entity["x"];
@@ -56,13 +86,58 @@ function drawCircle(context,entity) {
         strokeStyle = fillStyle;
         arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, false);  
         stroke();                                
+    }*/
+    with(context) {
+        beginPath();              
+        lineWidth = 3;
+        var x = entity["x"];
+        var y = entity["y"];
+        console.log(entity["colour"]);
+        fillStyle = (entity["colour"])?entity["colour"]:currentColor;
+        strokeStyle = fillStyle;
+
+        if (!indicatorColours.includes(fillStyle)) {
+            arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, true); 
+        } else {
+            let mag = 25;
+            moveTo(x - mag, y + mag);
+            lineTo(x, y);
+            moveTo(x, y);
+            lineTo(x + mag, y + mag);
+            moveTo(x, y);
+            
+        }
+        stroke();                               
+    }
+}
+
+function drawTools() {
+    with(context) {
+        beginPath();
+        fillStyle = '#222222';
+        fillRect(0, 0, 100, 100);
+    }
+
+    with(context) {
+        beginPath();
+        fillStyle = '#ff0000';
+        fillRect(100, 0, 100, 100);
+    }
+
+    with(context) {
+        beginPath();
+        fillStyle = '#00ff00';
+        fillRect(200, 0, 100, 100);
+    }
+
+    with(context) {
+        beginPath();
+        fillStyle = '#0000ff';
+        fillRect(300, 0, 100, 100);
     }
 }
 
 function prepEntity(entity) {
-    if (!entity["colour"]) {
-        entity["colour"] = "#FF0000";
-    }
     if (!entity["radius"]) {
         entity["radius"] = 50;
     }
@@ -71,9 +146,9 @@ function prepEntity(entity) {
 
 function clearFrame() {
     with(context) {
-	moveTo(0,0);
-	fillStyle = "#000";
-	fillRect(0,0,W,H);
+        moveTo(0,0);
+        fillStyle = "#000";
+        fillRect(0,0,W,H);
     }
 
 }
@@ -128,7 +203,7 @@ function addEntity(entity, data) {
 }
 var counter = 0;
 function addEntityWithoutName(data) {
-    var name = "X"+(counter++)%100;
+    var name = "X"+(counter++);
     addEntity(name,data);
 }
 
@@ -231,16 +306,20 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    addEntity('down', {'x':x,'y':y,'colour':indicatorColours[0]});
+    // if (x > 0 && x < 100 && y > 0 && y < 100) clearWorld();
+    // '#ff0000'
+    if (x > 100 && x < 200 && y > 0 && y < 100) currentColor = '#ff0000';
+    if (x > 200 && x < 300 && y > 0 && y < 100) currentColor = '#00ff00';
+    if (x > 300 && x < 400 && y > 0 && y < 100) currentColor = '#0000ff';
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    addEntity('up',{'x':x,'y':y,'colour':indicatorColours[1]});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
-                          'radius':10});
+    addEntityWithoutName({'x':x,'y':y,'radius':5});
 });
 
 
@@ -253,7 +332,10 @@ function wsSetup() {
     var url = "ws://"+host+"/subscribe";   
     socket = new WebSocket(url);
     socket.onopen = function() {
-        //XXX: TODO What are you going to do here?
+        sendJSONXMLHTTPRequest('/world', null, (returnedData) => {
+            world = returnedData;
+            drawNextFrame();
+        }, 'GET');
     };
     socket.onerror = function(msg) {
         debug("WebSocket Error:" + msg.data);
@@ -261,7 +343,10 @@ function wsSetup() {
     socket.onmessage = function(msg) {  
         try {
             debug("WebSocket Recv:" + msg.data);
-            //XXX: TODO What are you going to do here?            
+            let data = JSON.parse(msg.data)
+            for (let entity in data) world[entity] = data[entity];
+            
+            drawNextFrame();
         } catch (e) {
             alert("socket on message: " + e);
         }
