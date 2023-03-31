@@ -95,12 +95,15 @@ def read_ws(ws,client):
     try:
         while True:
             msg = ws.receive()
-            if msg is None:
-                break
-            packet = json.loads(msg)
-            send_all_json(packet)
+            print(f"WEBSOCKET RECV: {msg}")
+            if msg is None: break
+            [myWorld.set(k, v) for k, v in json.loads(msg).items()]
+            
     except Exception as e:
         """done"""
+    
+    return None
+
 
 @sockets.route('/subscribe')
 def subscribe_socket(ws):

@@ -52,8 +52,6 @@ function sendJSONXMLHTTPRequest(url, objects, callback, method = 'PUT') {
     xhr.onreadystatechange = function () {
         if (xhr.readyState==4) {
             try {
-                //XXX: parse some JSON from the request!
-                //XXX: Pass the data to the callback!
                 if (xhr.status==200) callback(JSON.parse(xhr.responseText));
             } 
             catch(e) {
@@ -62,8 +60,6 @@ function sendJSONXMLHTTPRequest(url, objects, callback, method = 'PUT') {
             }
         }
     };
-    //XXX: POST to a URL
-    //XXX: set the mimetype and the accept headers!
     // Remember to use application/json !
     xhr.open(method, url, true);
     var headerAttributes = {
@@ -71,7 +67,7 @@ function sendJSONXMLHTTPRequest(url, objects, callback, method = 'PUT') {
         'Content-Type': 'application/json',
     }
     for (var k in headerAttributes) xhr.setRequestHeader(k, headerAttributes[k]);
-    xhr.send(objects?JSON.stringify(objects):'');
+    xhr.send(JSON.stringify(objects));
 }
 
 //XXX: TODO Make this prettier!
@@ -200,6 +196,7 @@ function addEntity(entity, data) {
     world[entity] = data;
     drawNextFrame(); // (but should we?)
     //XXX: Send a XHTML Request that updates the entity you just modified!
+    socket.send(JSON.stringify({[entity]: data}));
 }
 var counter = 0;
 function addEntityWithoutName(data) {
@@ -332,20 +329,20 @@ function wsSetup() {
     var url = "ws://"+host+"/subscribe";   
     socket = new WebSocket(url);
     socket.onopen = function() {
-        sendJSONXMLHTTPRequest('/world', null, (returnedData) => {
+        /*sendJSONXMLHTTPRequest('/world', null, (returnedData) => {
             world = returnedData;
             drawNextFrame();
-        }, 'GET');
+        }, 'GET');*/
     };
     socket.onerror = function(msg) {
-        debug("WebSocket Error:" + msg.data);
+        debug("WebSocket Error:" + msg);
+        console.log(msg);
     };
     socket.onmessage = function(msg) {  
         try {
             debug("WebSocket Recv:" + msg.data);
-            let data = JSON.parse(msg.data)
-            for (let entity in data) world[entity] = data[entity];
-            
+            var data = JSON.parse(msg.data);
+            for (var entity in data) world[entity] = data[entity];
             drawNextFrame();
         } catch (e) {
             alert("socket on message: " + e);
