@@ -88,7 +88,6 @@ function drawCircle(context,entity) {
         lineWidth = 3;
         var x = entity["x"];
         var y = entity["y"];
-        console.log(entity["colour"]);
         fillStyle = (entity["colour"])?entity["colour"]:currentColor;
         strokeStyle = fillStyle;
 
@@ -326,7 +325,7 @@ mouse.mouseuppers.push(function(x,y,clicked,e) {
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'radius':5});
+    addEntityWithoutName({'x':x,'y':y,'radius':5, 'colour': currentColor});
     counter++;
 });
 
