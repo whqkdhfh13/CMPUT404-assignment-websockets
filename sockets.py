@@ -62,54 +62,40 @@ class World:
 myWorld = World()  
 clients = []
     
-# class example
-class Client:
-    def __init__(self):
-        self.queue = queue.Queue()
-
-    def put(self, v):
-        self.queue.put_nowait(v)
-
-    def get(self):
-        return self.queue.get()
-    
-
-def send_all_json(obj):
-    for client in clients:
-        client.put(json.dumps(obj))
-    
 def set_listener( entity, data ):
-    ''' do something with the update ! '''    
-    send_all_json({entity: data})  
+    ''' do something with the update ! '''   
+    [client.put_nowait(json.dumps({entity: data})) for client in clients] 
 
 myWorld.add_set_listener( set_listener )
         
 @app.route('/')
 def hello():
     '''Return something coherent here.. perhaps redirect to /static/index.html '''
-    return redirect('/static/index.html')
+    return redirect('./static/index.html', code=301)
 
 def read_ws(ws,client):
     '''A greenlet function that reads from the websocket and updates the world'''
     # class example
-    try:
-        while True:
-            msg = ws.receive()
-            print(f"WEBSOCKET RECV: {msg}")
-            if msg is None: break
-            [myWorld.set(k, v) for k, v in json.loads(msg).items()]
+    while True:
+        msg = ws.receive()
+        print(f"WEBSOCKET RECV: {msg}")
+        if msg is None: break
+        [myWorld.set(k, v) for k, v in json.loads(msg).items()]
             
-    except Exception as e:
-        """done"""
-    
-    return None
+
+@app.route("/world", methods=['POST','GET'])    
+def world():
+    '''you should probably return the world here'''
+    return json.dumps(myWorld.world())
 
 
 @sockets.route('/subscribe')
 def subscribe_socket(ws):
     '''Fulfill the websocket URL of /subscribe, every update notify the
        websocket and read updates from the websocket '''
-    c = Client()
+    print('hello')
+    ws.send(world())
+    c = queue.Queue()
     clients.append(c)
     g = gevent.spawn(read_ws, ws, c)
     try:
@@ -143,19 +129,14 @@ def get_entity(entity):
 @app.route("/entity/<entity>", methods=['POST','PUT'])
 def update(entity):
     '''update the entities via this interface'''
-    [myWorld.update(entity, key, value) for key,value in flask_post_json().items()]
-    get_entity(entity)
-
-@app.route("/world", methods=['POST','GET'])    
-def world():
-    '''you should probably return the world here'''
-    return json.dumps(myWorld.world())
+    myWorld.set(entity, flask_post_json())
+    return get_entity(entity)
 
 @app.route("/clear", methods=['POST','GET'])
 def clear():
     '''Clear the world out!'''
     myWorld.clear()
-    world()
+    return world()
 
 
 

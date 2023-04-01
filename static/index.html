@@ -196,7 +196,7 @@ function addEntity(entity, data) {
     world[entity] = data;
     drawNextFrame(); // (but should we?)
     //XXX: Send a XHTML Request that updates the entity you just modified!
-    socket.send(JSON.stringify({[entity]: data}));
+    sendJSONXMLHTTPRequest("http://"+host+"/entity/"+entity, data, ()=>{}, "POST");
 }
 var counter = 0;
 function addEntityWithoutName(data) {
@@ -329,10 +329,10 @@ function wsSetup() {
     var url = "ws://"+host+"/subscribe";   
     socket = new WebSocket(url);
     socket.onopen = function() {
-        /*sendJSONXMLHTTPRequest('/world', null, (returnedData) => {
+        sendJSONXMLHTTPRequest('/world', null, (returnedData) => {
             world = returnedData;
             drawNextFrame();
-        }, 'GET');*/
+        }, 'GET');
     };
     socket.onerror = function(msg) {
         debug("WebSocket Error:" + msg);
@@ -342,7 +342,8 @@ function wsSetup() {
         try {
             debug("WebSocket Recv:" + msg.data);
             var data = JSON.parse(msg.data);
-            for (var entity in data) world[entity] = data[entity];
+            // https://www.javascripttutorial.net/object/javascript-merge-objects/
+            world = {...world, ...obj};
             drawNextFrame();
         } catch (e) {
             alert("socket on message: " + e);
