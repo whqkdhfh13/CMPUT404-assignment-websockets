@@ -322,10 +322,12 @@ mouse.mousedowners.push(function(x,y,clicked,e) {
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
     addEntity('up',{'x':x,'y':y,'colour':indicatorColours[1]});
+    counter++;
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
     addEntityWithoutName({'x':x,'y':y,'radius':5});
+    counter++;
 });
 
 
