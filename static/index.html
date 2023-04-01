@@ -107,6 +107,14 @@ function drawCircle(context,entity) {
     }
 }
 
+function clearWorld() {
+    sendJSONXMLHTTPRequest(`/clear`, null, (returnedData) => {
+        world = returnedData;
+        renderFrame();
+    }, 'GET');
+    counter = 0;
+}
+
 function drawTools() {
     with(context) {
         beginPath();
@@ -152,6 +160,7 @@ function clearFrame() {
 // This actually draws the frame
 function renderFrame() {
     clearFrame();
+    drawTools();
     for (var key in world) {
         var entity = world[key];
         drawCircle(context,prepEntity(entity));
@@ -304,7 +313,7 @@ mouse = (function() {
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
     addEntity('down', {'x':x,'y':y,'colour':indicatorColours[0]});
-    // if (x > 0 && x < 100 && y > 0 && y < 100) clearWorld();
+    if (x > 0 && x < 100 && y > 0 && y < 100) clearWorld();
     // '#ff0000'
     if (x > 100 && x < 200 && y > 0 && y < 100) currentColor = '#ff0000';
     if (x > 200 && x < 300 && y > 0 && y < 100) currentColor = '#00ff00';
